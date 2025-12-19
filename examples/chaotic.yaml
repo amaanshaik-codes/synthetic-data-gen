@@ -1,0 +1,105 @@
+# Chaotic Data Configuration
+# ==========================
+# Maximum mess for advanced data cleaning practice
+
+name: "chaotic_data_challenge"
+description: "Extremely messy dataset for advanced data cleaning and wrangling practice"
+
+business_context:
+  industry: healthcare
+  business_model: b2b
+  geography: global
+  time_span_months: 18
+  countries:
+    - US
+    - UK
+    - DE
+    - FR
+    - JP
+    - AU
+
+business_size:
+  scale: enterprise
+  num_customers: 75000
+  daily_transactions: 3000
+  num_products: 800
+
+data_quality:
+  missing_values:
+    global_rate: 0.25
+    per_column:
+      phone: 0.40
+      email: 0.15
+      state: 0.50
+      postal_code: 0.35
+    null_representations:
+      - ""
+      - "NULL"
+      - "N/A"
+      - "None"
+      - "nan"
+      - "-"
+      - "?"
+      - "NA"
+      - "NaN"
+      - "missing"
+      - "MISSING"
+      - "-999"
+  
+  duplicates:
+    rate: 0.10
+    exact_duplicates: true
+    near_duplicates: true
+  
+  inconsistencies:
+    date_formats: true
+    date_format_variations:
+      - "%Y-%m-%d"
+      - "%d/%m/%Y"
+      - "%m/%d/%Y"
+      - "%Y/%m/%d"
+      - "%d-%m-%Y"
+      - "%B %d, %Y"
+      - "%d %b %Y"
+      - "%Y%m%d"
+      - "%d.%m.%Y"
+    currency_formats: true
+    category_typos: true
+    typo_rate: 0.10
+    case_inconsistencies: true
+    whitespace_issues: true
+    encoding_issues: true
+  
+  outliers:
+    rate: 0.08
+    magnitude: 4.0
+    outlier_types:
+      - extreme_high
+      - extreme_low
+      - impossible_values
+  
+  noise:
+    label_noise_rate: 0.08
+    feature_noise_rate: 0.10
+    noise_type: salt_pepper
+  
+  data_drift:
+    enabled: true
+    drift_start_percentage: 0.5
+    drift_magnitude: 0.4
+    drift_type: sudden
+
+difficulty: chaotic
+
+analytics:
+  use_case: diagnostic
+  feature_leakage: true  # Include for detection practice
+  train_test_split: 0.75
+
+output:
+  format: csv  # CSV shows issues more clearly
+  directory: "./chaotic_output"
+  include_metadata: true
+
+reproducibility:
+  seed: 666
