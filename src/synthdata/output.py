@@ -66,7 +66,9 @@ class OutputHandler:
             df.to_csv(file_path, index=False)
         
         elif self.config.format == OutputFormat.PARQUET:
-            df.to_parquet(
+            # Clean dataframe for Parquet compatibility
+            df_clean = self._prepare_for_parquet(df)
+            df_clean.to_parquet(
                 file_path,
                 index=False,
                 compression=self.config.compression or "snappy",
@@ -84,6 +86,30 @@ class OutputHandler:
             self._save_as_sql(df, table_name, file_path)
         
         return file_path
+    
+    def _prepare_for_parquet(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Prepare DataFrame for Parquet format by handling mixed types."""
+        df = df.copy()
+        
+        for col in df.columns:
+            if df[col].dtype == object:
+                # Try to convert object columns to appropriate types
+                # First, try numeric
+                try:
+                    # Check if most values are numeric
+                    numeric_vals = pd.to_numeric(df[col], errors='coerce')
+                    non_null_ratio = numeric_vals.notna().sum() / max(1, df[col].notna().sum())
+                    
+                    if non_null_ratio > 0.8:
+                        df[col] = numeric_vals
+                        continue
+                except Exception:
+                    pass
+                
+                # If not numeric, convert all values to strings
+                df[col] = df[col].astype(str).replace('nan', None).replace('None', None)
+        
+        return df
     
     def _get_file_path(self, output_path: Path, table_name: str) -> Path:
         """Get the file path for a table."""
