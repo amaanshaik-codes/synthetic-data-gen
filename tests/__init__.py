@@ -1,1 +1,0 @@
-"""SynthData test suite."""

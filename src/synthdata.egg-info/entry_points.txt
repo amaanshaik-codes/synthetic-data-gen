@@ -1,2 +1,0 @@
-[console_scripts]
-synthdata = synthdata.cli:main
