@@ -24,3 +24,8 @@ Thumbs.db
 # Project specific
 output/
 tests/__pycache__/
+*.csv
+ps/ANALYSIS_REPORT.md
+ups/ANALYSIS_REPORT.md
+test_report.md
+test_enhanced.py

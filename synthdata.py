@@ -8,6 +8,11 @@ from rich.panel import Panel
 from rich.prompt import Prompt, IntPrompt, Confirm
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
+try:
+    import openpyxl
+except ImportError:
+    openpyxl = None
+
 from generators import GENERATORS
 from quality import QualityInjector, LogicalIssueInjector
 
@@ -78,14 +83,25 @@ def collect_config() -> Optional[dict]:
     config["quality_rate"] = QUALITY_LEVELS[quality_name]
     
     console.print("\n[bold]5. Output[/bold]")
-    formats = ["csv", "parquet", "both"]
+    formats = ["csv", "parquet", "json", "excel", "sqlite", "all"]
     idx = show_menu("Format", formats)
     config["format"] = formats[idx - 1]
     config["output_dir"] = Prompt.ask("Output folder", default="./output")
     
+    console.print("\n[bold]6. Advanced Options[/bold]")
+    if Confirm.ask("Customize advanced settings?", default=False):
+        config["seed"] = IntPrompt.ask("Random seed", default=42)
+        config["growth_rate"] = IntPrompt.ask("Monthly growth % (0-50)", default=5)
+        if Confirm.ask("Generate analysis report?", default=True):
+            config["generate_report"] = True
+    else:
+        config["seed"] = 42
+        config["growth_rate"] = 5
+        config["generate_report"] = True
+    
     console.print()
     summary = Table(show_header=False, box=None)
-    summary.add_column(style="cyan", width=15)
+    summary.add_column(style="cyan", width=18)
     summary.add_column(style="white")
     summary.add_row("Industry", config["industry"])
     summary.add_row("Size", config["size"])
@@ -93,6 +109,8 @@ def collect_config() -> Optional[dict]:
     summary.add_row("Quality", config["quality"])
     summary.add_row("Format", config["format"])
     summary.add_row("Output", config["output_dir"])
+    summary.add_row("Growth Rate", f"{config.get('growth_rate', 5)}%/month")
+    summary.add_row("Generate Report", "Yes" if config.get("generate_report", True) else "No")
     console.print(Panel(summary, title="Configuration", border_style="green"))
     
     if not Confirm.ask("\nGenerate?", default=True):
@@ -107,20 +125,27 @@ def generate(config: dict) -> Dict[str, pd.DataFrame]:
         GeneratorClass = GENERATORS[config["industry"]]
         scale = config["scale"]
         
+        seed = config.get("seed", 42)
+        growth = config.get("growth_rate", 5) / 100
+        
         if config["industry"] == "retail":
             gen = GeneratorClass(
                 n_customers=int(500 * scale),
                 n_products=int(100 * scale),
                 n_stores=int(20 * scale),
                 n_transactions=int(5000 * scale),
-                months=config["months"]
+                months=config["months"],
+                seed=seed,
+                growth_rate=growth
             )
         elif config["industry"] == "ecommerce":
             gen = GeneratorClass(
                 n_customers=int(500 * scale),
                 n_products=int(100 * scale),
                 n_orders=int(2000 * scale),
-                months=config["months"]
+                months=config["months"],
+                seed=seed,
+                growth_rate=growth
             )
         elif config["industry"] == "banking":
             gen = GeneratorClass(
@@ -128,7 +153,9 @@ def generate(config: dict) -> Dict[str, pd.DataFrame]:
                 n_accounts=int(800 * scale),
                 n_branches=int(30 * scale),
                 n_transactions=int(10000 * scale),
-                months=config["months"]
+                months=config["months"],
+                seed=seed,
+                growth_rate=growth
             )
         elif config["industry"] == "healthcare":
             gen = GeneratorClass(
@@ -136,12 +163,16 @@ def generate(config: dict) -> Dict[str, pd.DataFrame]:
                 n_doctors=int(50 * scale),
                 n_hospitals=int(10 * scale),
                 n_encounters=int(3000 * scale),
-                months=config["months"]
+                months=config["months"],
+                seed=seed,
+                growth_rate=growth
             )
         elif config["industry"] == "saas":
             gen = GeneratorClass(
                 n_customers=int(300 * scale),
-                months=config["months"]
+                months=config["months"],
+                seed=seed,
+                growth_rate=growth
             )
         elif config["industry"] == "logistics":
             gen = GeneratorClass(
@@ -149,7 +180,9 @@ def generate(config: dict) -> Dict[str, pd.DataFrame]:
                 n_vehicles=int(50 * scale),
                 n_warehouses=int(10 * scale),
                 n_shipments=int(5000 * scale),
-                months=config["months"]
+                months=config["months"],
+                seed=seed,
+                growth_rate=growth
             )
         
         progress.update(task, description="Generating tables...")
@@ -167,11 +200,30 @@ def generate(config: dict) -> Dict[str, pd.DataFrame]:
         output_dir = Path(config["output_dir"])
         output_dir.mkdir(parents=True, exist_ok=True)
         
+        fmt = config["format"]
         for name, df in tables.items():
-            if config["format"] in ["csv", "both"]:
+            if fmt in ["csv", "all"]:
                 df.to_csv(output_dir / f"{name}.csv", index=False)
-            if config["format"] in ["parquet", "both"]:
+            if fmt in ["parquet", "all"]:
                 df.to_parquet(output_dir / f"{name}.parquet", index=False)
+            if fmt in ["json", "all"]:
+                df.to_json(output_dir / f"{name}.json", orient="records", lines=True)
+            if fmt in ["excel", "all"]:
+                df.to_excel(output_dir / f"{name}.xlsx", index=False, engine="openpyxl")
+        
+        if fmt in ["sqlite", "all"]:
+            import sqlite3
+            db_path = output_dir / "data.db"
+            conn = sqlite3.connect(db_path)
+            for name, df in tables.items():
+                df.to_sql(name, conn, if_exists="replace", index=False)
+            conn.close()
+        
+        if config.get("generate_report", True):
+            progress.update(task, description="Generating report...")
+            from report import generate_report
+            report_path = output_dir / "ANALYSIS_REPORT.md"
+            generate_report(tables, config, report_path)
     
     return tables
 

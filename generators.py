@@ -8,9 +8,10 @@ from faker import Faker
 
 
 class BaseGenerator(ABC):
-    def __init__(self, months: int = 12, seed: int = 42):
+    def __init__(self, months: int = 12, seed: int = 42, growth_rate: float = 0.05):
         self.months = months
         self.seed = seed
+        self.growth_rate = growth_rate
         self.end_date = datetime.now().replace(day=1) - timedelta(days=1)
         self.start_date = self.end_date - timedelta(days=months * 30)
         
@@ -20,6 +21,11 @@ class BaseGenerator(ABC):
         Faker.seed(seed)
         
         self.dim_date = None
+    
+    def _apply_growth(self, base_count: int, date: datetime) -> int:
+        months_diff = (date.year - self.start_date.year) * 12 + date.month - self.start_date.month
+        growth_factor = (1 + self.growth_rate) ** months_diff
+        return int(base_count * growth_factor)
 
     def _random_date(self, start: datetime, end: datetime) -> datetime:
         delta = end - start
@@ -66,8 +72,8 @@ class BaseGenerator(ABC):
 
 class RetailGenerator(BaseGenerator):
     def __init__(self, n_customers: int = 500, n_products: int = 100, n_stores: int = 20, 
-                 n_transactions: int = 5000, months: int = 12, seed: int = 42):
-        super().__init__(months, seed)
+                 n_transactions: int = 5000, months: int = 12, seed: int = 42, growth_rate: float = 0.05):
+        super().__init__(months, seed, growth_rate)
         self.n_customers = n_customers
         self.n_products = n_products
         self.n_stores = n_stores
@@ -188,8 +194,8 @@ class RetailGenerator(BaseGenerator):
 
 class EcommerceGenerator(BaseGenerator):
     def __init__(self, n_customers: int = 500, n_products: int = 100, 
-                 n_orders: int = 2000, months: int = 12, seed: int = 42):
-        super().__init__(months, seed)
+                 n_orders: int = 2000, months: int = 12, seed: int = 42, growth_rate: float = 0.05):
+        super().__init__(months, seed, growth_rate)
         self.n_customers = n_customers
         self.n_products = n_products
         self.n_orders = n_orders
@@ -328,8 +334,8 @@ class EcommerceGenerator(BaseGenerator):
 
 class BankingGenerator(BaseGenerator):
     def __init__(self, n_customers: int = 500, n_accounts: int = 800, n_branches: int = 30,
-                 n_transactions: int = 10000, months: int = 12, seed: int = 42):
-        super().__init__(months, seed)
+                 n_transactions: int = 10000, months: int = 12, seed: int = 42, growth_rate: float = 0.05):
+        super().__init__(months, seed, growth_rate)
         self.n_customers = n_customers
         self.n_accounts = n_accounts
         self.n_branches = n_branches
@@ -493,8 +499,8 @@ class BankingGenerator(BaseGenerator):
 
 class HealthcareGenerator(BaseGenerator):
     def __init__(self, n_patients: int = 500, n_doctors: int = 50, n_hospitals: int = 10,
-                 n_encounters: int = 3000, months: int = 12, seed: int = 42):
-        super().__init__(months, seed)
+                 n_encounters: int = 3000, months: int = 12, seed: int = 42, growth_rate: float = 0.05):
+        super().__init__(months, seed, growth_rate)
         self.n_patients = n_patients
         self.n_doctors = n_doctors
         self.n_hospitals = n_hospitals
@@ -668,8 +674,8 @@ class HealthcareGenerator(BaseGenerator):
 
 class SaasGenerator(BaseGenerator):
     def __init__(self, n_customers: int = 300, n_plans: int = 5, 
-                 months: int = 12, seed: int = 42):
-        super().__init__(months, seed)
+                 months: int = 12, seed: int = 42, growth_rate: float = 0.05):
+        super().__init__(months, seed, growth_rate)
         self.n_customers = n_customers
         self.n_plans = n_plans
 
@@ -809,8 +815,8 @@ class SaasGenerator(BaseGenerator):
 
 class LogisticsGenerator(BaseGenerator):
     def __init__(self, n_routes: int = 100, n_vehicles: int = 50, n_warehouses: int = 10,
-                 n_shipments: int = 5000, months: int = 12, seed: int = 42):
-        super().__init__(months, seed)
+                 n_shipments: int = 5000, months: int = 12, seed: int = 42, growth_rate: float = 0.05):
+        super().__init__(months, seed, growth_rate)
         self.n_routes = n_routes
         self.n_vehicles = n_vehicles
         self.n_warehouses = n_warehouses
